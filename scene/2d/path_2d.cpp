@@ -404,6 +404,15 @@ void PathFollow2D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_progress_ratio", "ratio"), &PathFollow2D::set_progress_ratio);
 	ClassDB::bind_method(D_METHOD("get_progress_ratio"), &PathFollow2D::get_progress_ratio);
 
+	ClassDB::bind_method(D_METHOD("advance", "delta"), &PathFollow2D::advance);
+	ClassDB::bind_method(D_METHOD("get_progress_percent"), &PathFollow2D::get_progress_percent);
+
+	ClassDB::bind_method(D_METHOD("get_loops_completed"), &PathFollow2D::get_loops_completed);
+	ClassDB::bind_method(D_METHOD("reset_loops_completed"), &PathFollow2D::reset_loops_completed);
+
+	ClassDB::bind_method(D_METHOD("is_at_start"), &PathFollow2D::is_at_start);
+	ClassDB::bind_method(D_METHOD("is_at_end"), &PathFollow2D::is_at_end);
+
 	ClassDB::bind_method(D_METHOD("set_rotates", "enabled"), &PathFollow2D::set_rotation_enabled);
 	ClassDB::bind_method(D_METHOD("is_rotating"), &PathFollow2D::is_rotation_enabled);
 
@@ -415,20 +424,34 @@ void PathFollow2D::_bind_methods() {
 
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "progress", PROPERTY_HINT_RANGE, "0,10000,0.01,or_less,or_greater,suffix:px"), "set_progress", "get_progress");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "progress_ratio", PROPERTY_HINT_RANGE, "0,1,0.0001,or_less,or_greater", PROPERTY_USAGE_EDITOR), "set_progress_ratio", "get_progress_ratio");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "progress_percent", PROPERTY_HINT_RANGE, "0,100,0.01,suffix:%"), "", "get_progress_percent");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "h_offset"), "set_h_offset", "get_h_offset");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "v_offset"), "set_v_offset", "get_v_offset");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "rotates"), "set_rotates", "is_rotating");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "cubic_interp"), "set_cubic_interpolation", "get_cubic_interpolation");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "loop"), "set_loop", "has_loop");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "loops_completed"), "", "get_loops_completed");
+
+	ADD_SIGNAL(MethodInfo("looped",
+			PropertyInfo(Variant::INT, "loops_completed")));
+	ADD_SIGNAL(MethodInfo("reached_start"));
+	ADD_SIGNAL(MethodInfo("reached_end"));
 }
 
 void PathFollow2D::set_progress(real_t p_progress) {
 	ERR_FAIL_COND(!std::isfinite(p_progress));
+
+	const real_t previous_progress = progress;
+	real_t path_length = 0.0;
+
+	if (path && path->get_curve().is_valid()) {
+		path_length = path->get_curve()->get_baked_length();
+	}
+
 	progress = p_progress;
+
 	if (path) {
 		if (path->get_curve().is_valid()) {
-			real_t path_length = path->get_curve()->get_baked_length();
-
 			if (loop && path_length) {
 				progress = Math::fposmod(progress, path_length);
 				if (!Math::is_zero_approx(p_progress) && Math::is_zero_approx(progress)) {
@@ -439,6 +462,7 @@ void PathFollow2D::set_progress(real_t p_progress) {
 			}
 		}
 
+		_update_progress_state(previous_progress, p_progress, path_length);
 		_update_transform();
 	}
 }
@@ -481,6 +505,73 @@ real_t PathFollow2D::get_progress_ratio() const {
 		return get_progress() / path->get_curve()->get_baked_length();
 	} else {
 		return 0;
+	}
+}
+
+real_t PathFollow2D::get_progress_percent() const {
+	return get_progress_ratio() * 100.0;
+}
+
+void PathFollow2D::advance(real_t p_delta) {
+	set_progress(get_progress() + p_delta);
+}
+
+int64_t PathFollow2D::get_loops_completed() const {
+	return loops_completed;
+}
+
+void PathFollow2D::reset_loops_completed() {
+	loops_completed = 0;
+}
+
+bool PathFollow2D::is_at_start() const {
+	return Math::is_zero_approx(progress);
+}
+
+bool PathFollow2D::is_at_end() const {
+	if (!path) {
+		return false;
+	}
+
+	const real_t path_length = path->get_curve()->get_baked_length();
+	return path_length > 0.0 && Math::is_equal_approx(progress, path_length);
+}
+
+void PathFollow2D::_update_progress_state(real_t p_previous_progress, real_t p_requested_progress, real_t p_path_length) {
+	if (p_path_length <= 0.0) {
+		return;
+	}
+
+	const int64_t previous_loop_index = static_cast<int64_t>(Math::floor(p_previous_progress / p_path_length));
+	const int64_t requested_loop_index = static_cast<int64_t>(Math::floor(p_requested_progress / p_path_length));
+	const int64_t loop_count_delta = requested_loop_index - previous_loop_index;
+
+	if (loop) {
+		if (loop_count_delta > 0) {
+			for (int64_t i = 0; i < loop_count_delta; i++) {
+				emit_signal(SNAME("reached_end"));
+				loops_completed++;
+				emit_signal(SNAME("looped"), loops_completed);
+				emit_signal(SNAME("reached_start"));
+			}
+		} else if (loop_count_delta < 0) {
+			for (int64_t i = 0; i < -loop_count_delta; i++) {
+				emit_signal(SNAME("reached_start"));
+				loops_completed++;
+				emit_signal(SNAME("looped"), loops_completed);
+				emit_signal(SNAME("reached_end"));
+			}
+		}
+
+		return;
+	}
+
+	if (p_previous_progress > 0.0 && Math::is_zero_approx(progress)) {
+		emit_signal(SNAME("reached_start"));
+	}
+
+	if (p_previous_progress < p_path_length && Math::is_equal_approx(progress, p_path_length)) {
+		emit_signal(SNAME("reached_end"));
 	}
 }
 

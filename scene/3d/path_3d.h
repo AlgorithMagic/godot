@@ -91,9 +91,11 @@ private:
 	real_t v_offset = 0.0;
 	bool cubic = true;
 	bool loop = true;
+	int64_t loops_completed = 0;
 	bool tilt_enabled = true;
 	bool use_model_front = false;
 	RotationMode rotation_mode = ROTATION_XYZ;
+	void _update_progress_state(real_t p_previous_progress, real_t p_requested_progress, real_t p_path_length);
 
 protected:
 	void _validate_property(PropertyInfo &p_property) const;
@@ -114,6 +116,15 @@ public:
 
 	void set_progress_ratio(real_t p_ratio);
 	real_t get_progress_ratio() const;
+
+	void advance(real_t p_delta);
+	real_t get_progress_percent() const;
+
+	int64_t get_loops_completed() const;
+	void reset_loops_completed();
+
+	bool is_at_start() const;
+	bool is_at_end() const;
 
 	void set_loop(bool p_loop);
 	bool has_loop() const;

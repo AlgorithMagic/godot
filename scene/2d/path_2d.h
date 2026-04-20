@@ -69,8 +69,6 @@ public:
 class PathFollow2D : public Node2D {
 	GDCLASS(PathFollow2D, Node2D);
 
-public:
-private:
 	Path2D *path = nullptr;
 	real_t progress = 0.0;
 	Timer *update_timer = nullptr;
@@ -78,7 +76,10 @@ private:
 	real_t v_offset = 0.0;
 	bool cubic = true;
 	bool loop = true;
+	int64_t loops_completed = 0;
 	bool rotates = true;
+
+	void _update_progress_state(real_t p_previous_progress, real_t p_requested_progress, real_t p_path_length);
 
 	void _update_transform();
 
@@ -94,14 +95,23 @@ public:
 	void set_progress(real_t p_progress);
 	real_t get_progress() const;
 
+	void set_progress_ratio(real_t p_ratio);
+	real_t get_progress_ratio() const;
+
+	void advance(real_t p_delta);
+	real_t get_progress_percent() const;
+
+	int64_t get_loops_completed() const;
+	void reset_loops_completed();
+
+	bool is_at_start() const;
+	bool is_at_end() const;
+
 	void set_h_offset(real_t p_h_offset);
 	real_t get_h_offset() const;
 
 	void set_v_offset(real_t p_v_offset);
 	real_t get_v_offset() const;
-
-	void set_progress_ratio(real_t p_ratio);
-	real_t get_progress_ratio() const;
 
 	void set_loop(bool p_loop);
 	bool has_loop() const;

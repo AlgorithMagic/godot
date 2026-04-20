@@ -417,6 +417,15 @@ void PathFollow3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_progress_ratio", "ratio"), &PathFollow3D::set_progress_ratio);
 	ClassDB::bind_method(D_METHOD("get_progress_ratio"), &PathFollow3D::get_progress_ratio);
 
+	ClassDB::bind_method(D_METHOD("advance", "delta"), &PathFollow3D::advance);
+	ClassDB::bind_method(D_METHOD("get_progress_percent"), &PathFollow3D::get_progress_percent);
+
+	ClassDB::bind_method(D_METHOD("get_loops_completed"), &PathFollow3D::get_loops_completed);
+	ClassDB::bind_method(D_METHOD("reset_loops_completed"), &PathFollow3D::reset_loops_completed);
+
+	ClassDB::bind_method(D_METHOD("is_at_start"), &PathFollow3D::is_at_start);
+	ClassDB::bind_method(D_METHOD("is_at_end"), &PathFollow3D::is_at_end);
+
 	ClassDB::bind_method(D_METHOD("set_rotation_mode", "rotation_mode"), &PathFollow3D::set_rotation_mode);
 	ClassDB::bind_method(D_METHOD("get_rotation_mode"), &PathFollow3D::get_rotation_mode);
 
@@ -436,6 +445,7 @@ void PathFollow3D::_bind_methods() {
 
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "progress", PROPERTY_HINT_RANGE, "0,10000,0.01,or_less,or_greater,suffix:m"), "set_progress", "get_progress");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "progress_ratio", PROPERTY_HINT_RANGE, "0,1,0.0001,or_less,or_greater", PROPERTY_USAGE_EDITOR), "set_progress_ratio", "get_progress_ratio");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "progress_percent", PROPERTY_HINT_RANGE, "0,100,0.01,suffix:%"), "", "get_progress_percent");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "h_offset", PROPERTY_HINT_NONE, "suffix:m"), "set_h_offset", "get_h_offset");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "v_offset", PROPERTY_HINT_NONE, "suffix:m"), "set_v_offset", "get_v_offset");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "rotation_mode", PROPERTY_HINT_ENUM, "None,Y,XY,XYZ,Oriented"), "set_rotation_mode", "get_rotation_mode");
@@ -443,6 +453,12 @@ void PathFollow3D::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "cubic_interp"), "set_cubic_interpolation", "get_cubic_interpolation");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "loop"), "set_loop", "has_loop");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "tilt_enabled"), "set_tilt_enabled", "is_tilt_enabled");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "loops_completed"), "", "get_loops_completed");
+
+	ADD_SIGNAL(MethodInfo("looped",
+			PropertyInfo(Variant::INT, "loops_completed")));
+	ADD_SIGNAL(MethodInfo("reached_start"));
+	ADD_SIGNAL(MethodInfo("reached_end"));
 
 	BIND_ENUM_CONSTANT(ROTATION_NONE);
 	BIND_ENUM_CONSTANT(ROTATION_Y);
@@ -483,7 +499,6 @@ void PathFollow3D::set_h_offset(real_t p_h_offset) {
 	h_offset = p_h_offset;
 	update_transform();
 }
-
 real_t PathFollow3D::get_h_offset() const {
 	return h_offset;
 }
@@ -495,6 +510,7 @@ void PathFollow3D::set_v_offset(real_t p_v_offset) {
 	v_offset = p_v_offset;
 	update_transform();
 }
+
 
 real_t PathFollow3D::get_v_offset() const {
 	return v_offset;
@@ -516,6 +532,73 @@ real_t PathFollow3D::get_progress_ratio() const {
 		return get_progress() / path->get_curve()->get_baked_length();
 	} else {
 		return 0;
+	}
+}
+
+real_t PathFollow3D::get_progress_percent() const {
+	return get_progress_ratio() * 100.0;
+}
+
+void PathFollow3D::advance(real_t p_delta) {
+	set_progress(get_progress() + p_delta);
+}
+
+int64_t PathFollow3D::get_loops_completed() const {
+	return loops_completed;
+}
+
+void PathFollow3D::reset_loops_completed() {
+	loops_completed = 0;
+}
+
+bool PathFollow3D::is_at_start() const {
+	return Math::is_zero_approx(progress);
+}
+
+bool PathFollow3D::is_at_end() const {
+	if (!path) {
+		return false;
+	}
+
+	const real_t path_length = path->get_curve()->get_baked_length();
+	return path_length > 0.0 && Math::is_equal_approx(progress, path_length);
+}
+
+void PathFollow3D::_update_progress_state(real_t p_previous_progress, real_t p_requested_progress, real_t p_path_length) {
+	if (p_path_length <= 0.0) {
+		return;
+	}
+
+	const int64_t previous_loop_index = static_cast<int64_t>(Math::floor(p_previous_progress / p_path_length));
+	const int64_t requested_loop_index = static_cast<int64_t>(Math::floor(p_requested_progress / p_path_length));
+	const int64_t loop_count_delta = requested_loop_index - previous_loop_index;
+
+	if (loop) {
+		if (loop_count_delta > 0) {
+			for (int64_t i = 0; i < loop_count_delta; i++) {
+				emit_signal(SNAME("reached_end"));
+				loops_completed++;
+				emit_signal(SNAME("looped"), loops_completed);
+				emit_signal(SNAME("reached_start"));
+			}
+		} else if (loop_count_delta < 0) {
+			for (int64_t i = 0; i < -loop_count_delta; i++) {
+				emit_signal(SNAME("reached_start"));
+				loops_completed++;
+				emit_signal(SNAME("looped"), loops_completed);
+				emit_signal(SNAME("reached_end"));
+			}
+		}
+
+		return;
+	}
+
+	if (p_previous_progress > 0.0 && Math::is_zero_approx(progress)) {
+		emit_signal(SNAME("reached_start"));
+	}
+
+	if (p_previous_progress < p_path_length && Math::is_equal_approx(progress, p_path_length)) {
+		emit_signal(SNAME("reached_end"));
 	}
 }
 
