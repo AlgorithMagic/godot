@@ -845,6 +845,7 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 
 	// Behavior: Documentation
 	_initial_set("text_editor/behavior/documentation/enable_tooltips", true, true);
+	_initial_set("text_editor/behavior/documentation/fold_doc_comments", false, true);
 
 	// Script list
 	_initial_set("text_editor/script_list/show_members_overview", true, true);

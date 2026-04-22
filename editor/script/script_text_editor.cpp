@@ -190,6 +190,7 @@ ScriptTextEditor::EditMenusSTE::EditMenusSTE() {
 	_popup_move_item(SEARCH_GOTO_LINE, goto_menu->get_popup());
 
 	edit_menu_fold->add_shortcut(ED_GET_SHORTCUT("script_text_editor/create_code_region"), EDIT_CREATE_CODE_REGION);
+	edit_menu_fold->add_shortcut(ED_GET_SHORTCUT("script_text_editor/toggle_fold_doc_comments"), EDIT_TOGGLE_FOLD_DOC_COMMENTS);
 	edit_menu_convert_indent->add_shortcut(ED_GET_SHORTCUT("script_text_editor/auto_indent"), EDIT_AUTO_INDENT);
 
 	search_menu->get_popup()->add_separator();
@@ -1689,6 +1690,9 @@ bool ScriptTextEditor::_edit_option(int p_op) {
 		case EDIT_CREATE_CODE_REGION: {
 			tx->create_code_region();
 		} break;
+		case EDIT_TOGGLE_FOLD_DOC_COMMENTS: {
+			toggle_fold_doc_comments_for_active_script();
+		} break;
 		case EDIT_TOGGLE_COMMENT: {
 			_edit_option_toggle_inline_comment();
 		} break;
@@ -1867,6 +1871,61 @@ bool ScriptTextEditor::_edit_option(int p_op) {
 		}
 	}
 	return true;
+}
+
+bool ScriptTextEditor::_is_doc_comment_block_start(CodeEdit *p_text_edit, int p_line) const {
+	const int delimiter_idx = p_text_edit->is_in_comment(p_line);
+	if (delimiter_idx == -1) {
+		return false;
+	}
+
+	if (p_text_edit->get_delimiter_start_key(delimiter_idx) != "##") {
+		return false;
+	}
+
+	if (p_line == 0) {
+		return true;
+	}
+
+	const int prev_delimiter_idx = p_text_edit->is_in_comment(p_line - 1);
+	if (prev_delimiter_idx == -1) {
+		return true;
+	}
+
+	return p_text_edit->get_delimiter_start_key(prev_delimiter_idx) != "##";
+}
+
+void ScriptTextEditor::toggle_fold_doc_comments_for_active_script() {
+	const bool fold = !bool(EDITOR_GET("text_editor/behavior/documentation/fold_doc_comments"));
+	EditorSettings::get_singleton()->set("text_editor/behavior/documentation/fold_doc_comments", fold);
+	apply_doc_comment_fold_state(fold);
+}
+
+void ScriptTextEditor::apply_doc_comment_fold_state(bool p_fold) {
+	CodeEdit *text_edit = code_editor->get_text_editor();
+	ERR_FAIL_NULL(text_edit);
+
+	const int line_count = text_edit->get_line_count();
+	LocalVector<int> doc_comment_headers;
+	doc_comment_headers.reserve(line_count / 4);
+
+	for (int line = 0; line < line_count; line++) {
+		if (_is_doc_comment_block_start(text_edit, line)) {
+			doc_comment_headers.push_back(line);
+		}
+	}
+
+	for (int i = 0; i < doc_comment_headers.size(); i++) {
+		const int line = doc_comment_headers[i];
+
+		if (p_fold) {
+			if (text_edit->can_fold_line(line)) {
+				text_edit->fold_line(line);
+			}
+		} else if (text_edit->is_line_folded(line)) {
+			text_edit->unfold_line(line);
+		}
+	}
 }
 
 void ScriptTextEditor::_edit_option_toggle_inline_comment() {
@@ -2632,6 +2691,7 @@ void ScriptTextEditor::register_editor() {
 	ED_SHORTCUT("script_text_editor/fold_all_lines", TTRC("Fold All Lines"), Key::NONE);
 	ED_SHORTCUT("script_text_editor/create_code_region", TTRC("Create Code Region"), KeyModifierMask::ALT | Key::R);
 	ED_SHORTCUT("script_text_editor/unfold_all_lines", TTRC("Unfold All Lines"), Key::NONE);
+	ED_SHORTCUT("script_text_editor/toggle_fold_doc_comments", TTRC("Toggle Fold Documentation Comments"), KeyModifierMask::ALT | Key::C);
 	ED_SHORTCUT("script_text_editor/duplicate_selection", TTRC("Duplicate Selection"), KeyModifierMask::SHIFT | KeyModifierMask::CTRL | Key::D);
 	ED_SHORTCUT_OVERRIDE("script_text_editor/duplicate_selection", "macos", KeyModifierMask::SHIFT | KeyModifierMask::META | Key::C);
 	ED_SHORTCUT("script_text_editor/duplicate_lines", TTRC("Duplicate Lines"), KeyModifierMask::CMD_OR_CTRL | KeyModifierMask::ALT | Key::DOWN);
