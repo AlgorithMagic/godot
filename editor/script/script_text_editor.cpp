@@ -2751,8 +2751,8 @@ void ScriptTextEditor::register_editor() {
 	ED_SHORTCUT("script_text_editor/fold_all_lines", TTRC("Fold All Lines"), Key::NONE);
 	ED_SHORTCUT("script_text_editor/create_code_region", TTRC("Create Code Region"), KeyModifierMask::ALT | Key::R);
 	ED_SHORTCUT("script_text_editor/unfold_all_lines", TTRC("Unfold All Lines"), Key::NONE);
-	ED_SHORTCUT("script_text_editor/toggle_fold_doc_comments", TTRC("Toggle Fold Documentation Comments"), KeyModifierMask::ALT | Key::C);
-	ED_SHORTCUT("script_text_editor/toggle_fold_comments", TTRC("Toggle Fold Comments"), KeyModifierMask::ALT | Key::C);
+	ED_SHORTCUT("script_text_editor/toggle_fold_doc_comments", TTRC("Toggle Fold Documentation Comments"), Key::NONE);
+	ED_SHORTCUT("script_text_editor/toggle_fold_comments", TTRC("Toggle Fold Comments"), Key::NONE);
 	ED_SHORTCUT("script_text_editor/duplicate_selection", TTRC("Duplicate Selection"), KeyModifierMask::SHIFT | KeyModifierMask::CTRL | Key::D);
 	ED_SHORTCUT_OVERRIDE("script_text_editor/duplicate_selection", "macos", KeyModifierMask::SHIFT | KeyModifierMask::META | Key::C);
 	ED_SHORTCUT("script_text_editor/duplicate_lines", TTRC("Duplicate Lines"), KeyModifierMask::CMD_OR_CTRL | KeyModifierMask::ALT | Key::DOWN);
