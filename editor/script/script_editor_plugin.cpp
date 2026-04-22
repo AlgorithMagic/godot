@@ -2751,6 +2751,7 @@ void ScriptEditor::_apply_editor_settings() {
 			teb->update_settings();
 			if (ScriptTextEditor *ste = Object::cast_to<ScriptTextEditor>(teb)) {
 				ste->apply_doc_comment_fold_state(EDITOR_GET("text_editor/behavior/documentation/fold_doc_comments"));
+				ste->apply_comment_fold_state(EDITOR_GET("text_editor/behavior/general/fold_comments"));
 			}
 		}
 	}

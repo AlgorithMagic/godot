@@ -108,6 +108,7 @@ class ScriptTextEditor : public CodeEditorBase {
 		EDIT_EVALUATE,
 		EDIT_CREATE_CODE_REGION,
 		EDIT_TOGGLE_FOLD_DOC_COMMENTS,
+		EDIT_TOGGLE_FOLD_COMMENTS,
 
 		SEARCH_LOCATE_FUNCTION,
 
@@ -215,6 +216,7 @@ protected:
 	virtual void _validate_script() override;
 
 	bool _is_doc_comment_block_start(CodeEdit *p_text_edit, int p_line) const;
+	bool _is_comment_block_start(CodeEdit *p_text_edit, int p_line) const;
 
 public:
 	void _update_connected_methods();
@@ -245,6 +247,9 @@ public:
 
 	void toggle_fold_doc_comments_for_active_script();
 	void apply_doc_comment_fold_state(bool p_fold);
+
+	void toggle_fold_comments_for_active_script();
+	void apply_comment_fold_state(bool p_fold);
 
 	ScriptTextEditor();
 	~ScriptTextEditor();

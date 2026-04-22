@@ -191,6 +191,7 @@ ScriptTextEditor::EditMenusSTE::EditMenusSTE() {
 
 	edit_menu_fold->add_shortcut(ED_GET_SHORTCUT("script_text_editor/create_code_region"), EDIT_CREATE_CODE_REGION);
 	edit_menu_fold->add_shortcut(ED_GET_SHORTCUT("script_text_editor/toggle_fold_doc_comments"), EDIT_TOGGLE_FOLD_DOC_COMMENTS);
+	edit_menu_fold->add_shortcut(ED_GET_SHORTCUT("script_text_editor/toggle_fold_comments"), EDIT_TOGGLE_FOLD_COMMENTS);
 	edit_menu_convert_indent->add_shortcut(ED_GET_SHORTCUT("script_text_editor/auto_indent"), EDIT_AUTO_INDENT);
 
 	search_menu->get_popup()->add_separator();
@@ -1873,6 +1874,29 @@ bool ScriptTextEditor::_edit_option(int p_op) {
 	return true;
 }
 
+static bool _is_comment_block_line(CodeEdit *p_text_edit, int p_line) {
+	if (p_line < 0 || p_line >= p_text_edit->get_line_count()) {
+		return false;
+	}
+
+	const String stripped_line = p_text_edit->get_line(p_line).strip_edges();
+
+	return stripped_line.begins_with("#") &&
+			!stripped_line.begins_with("##") &&
+			stripped_line != "#region" &&
+			stripped_line != "#endregion";
+}
+
+bool ScriptTextEditor::_is_comment_block_start(CodeEdit *p_text_edit, int p_line) const {
+	ERR_FAIL_NULL_V(p_text_edit, false);
+
+	if (!_is_comment_block_line(p_text_edit, p_line)) {
+		return false;
+	}
+
+	return p_line == 0 || !_is_comment_block_line(p_text_edit, p_line - 1);
+}
+
 bool ScriptTextEditor::_is_doc_comment_block_start(CodeEdit *p_text_edit, int p_line) const {
 	const int delimiter_idx = p_text_edit->is_in_comment(p_line);
 	if (delimiter_idx == -1) {
@@ -2692,6 +2716,7 @@ void ScriptTextEditor::register_editor() {
 	ED_SHORTCUT("script_text_editor/create_code_region", TTRC("Create Code Region"), KeyModifierMask::ALT | Key::R);
 	ED_SHORTCUT("script_text_editor/unfold_all_lines", TTRC("Unfold All Lines"), Key::NONE);
 	ED_SHORTCUT("script_text_editor/toggle_fold_doc_comments", TTRC("Toggle Fold Documentation Comments"), KeyModifierMask::ALT | Key::C);
+	ED_SHORTCUT("script_text_editor/toggle_fold_comments", TTRC("Toggle Fold Comments"), KeyModifierMask::ALT | Key::C);
 	ED_SHORTCUT("script_text_editor/duplicate_selection", TTRC("Duplicate Selection"), KeyModifierMask::SHIFT | KeyModifierMask::CTRL | Key::D);
 	ED_SHORTCUT_OVERRIDE("script_text_editor/duplicate_selection", "macos", KeyModifierMask::SHIFT | KeyModifierMask::META | Key::C);
 	ED_SHORTCUT("script_text_editor/duplicate_lines", TTRC("Duplicate Lines"), KeyModifierMask::CMD_OR_CTRL | KeyModifierMask::ALT | Key::DOWN);
