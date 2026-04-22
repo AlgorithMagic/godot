@@ -411,6 +411,7 @@ void ScriptEditor::_go_to_tab(int p_idx) {
 
 		if (ScriptTextEditor *ste = Object::cast_to<ScriptTextEditor>(teb)) {
 			ste->apply_doc_comment_fold_state(EDITOR_GET("text_editor/behavior/documentation/fold_doc_comments"));
+			ste->apply_comment_fold_state(EDITOR_GET("text_editor/behavior/general/fold_comments"));
 		}
 	}
 	if (EditorHelp *eh = Object::cast_to<EditorHelp>(c)) {

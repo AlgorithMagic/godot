@@ -1694,6 +1694,9 @@ bool ScriptTextEditor::_edit_option(int p_op) {
 		case EDIT_TOGGLE_FOLD_DOC_COMMENTS: {
 			toggle_fold_doc_comments_for_active_script();
 		} break;
+		case EDIT_TOGGLE_FOLD_COMMENTS: {
+			toggle_fold_comments_for_active_script();
+		} break;
 		case EDIT_TOGGLE_COMMENT: {
 			_edit_option_toggle_inline_comment();
 		} break;
@@ -1919,10 +1922,43 @@ bool ScriptTextEditor::_is_doc_comment_block_start(CodeEdit *p_text_edit, int p_
 	return p_text_edit->get_delimiter_start_key(prev_delimiter_idx) != "##";
 }
 
+void ScriptTextEditor::toggle_fold_comments_for_active_script() {
+	const bool fold = !bool(EDITOR_GET("text_editor/behavior/general/fold_comments"));
+	EditorSettings::get_singleton()->set("text_editor/behavior/general/fold_comments", fold);
+	apply_comment_fold_state(fold);
+}
+
 void ScriptTextEditor::toggle_fold_doc_comments_for_active_script() {
 	const bool fold = !bool(EDITOR_GET("text_editor/behavior/documentation/fold_doc_comments"));
 	EditorSettings::get_singleton()->set("text_editor/behavior/documentation/fold_doc_comments", fold);
 	apply_doc_comment_fold_state(fold);
+}
+
+void ScriptTextEditor::apply_comment_fold_state(bool p_fold) {
+	CodeEdit *text_edit = code_editor->get_text_editor();
+	ERR_FAIL_NULL(text_edit);
+
+	const int line_count = text_edit->get_line_count();
+	LocalVector<int> comment_headers;
+	comment_headers.reserve(line_count / 4);
+
+	for (int line = 0; line < line_count; line++) {
+		if (_is_comment_block_start(text_edit, line)) {
+			comment_headers.push_back(line);
+		}
+	}
+
+	for (uint32_t i = 0; i < comment_headers.size(); i++) {
+		const int line = comment_headers[i];
+
+		if (p_fold) {
+			if (text_edit->can_fold_line(line)) {
+				text_edit->fold_line(line);
+			}
+		} else if (text_edit->is_line_folded(line)) {
+			text_edit->unfold_line(line);
+		}
+	}
 }
 
 void ScriptTextEditor::apply_doc_comment_fold_state(bool p_fold) {
