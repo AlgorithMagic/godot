@@ -1915,7 +1915,7 @@ void ScriptTextEditor::apply_doc_comment_fold_state(bool p_fold) {
 		}
 	}
 
-	for (uint32_t i = 0; i < doc_comment_headers.size(); i++) {
+	for (int i = 0; i < doc_comment_headers.size(); i++) {
 		const int line = doc_comment_headers[i];
 
 		if (p_fold) {
