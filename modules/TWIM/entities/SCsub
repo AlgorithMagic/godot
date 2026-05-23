@@ -1,0 +1,10 @@
+from misc.utility.scons_hints import *
+
+Import("env_TWIM")
+
+env_TWIM.add_source_files(env_TWIM.modules_sources, [
+    "entity_type_resource.cpp",
+    "entity_catalog_resource.cpp",
+    "entity_store.cpp",
+])
+

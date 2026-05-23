@@ -1,0 +1,22 @@
+from misc.utility.scons_hints import *
+
+Import("env")
+
+env_TWIM = env.Clone()
+
+env_TWIM.add_source_files(env.modules_sources, [
+    "register_types.cpp",
+    "twim_settings.cpp",
+])
+
+SConscript("world/SCsub", exports="env_TWIM")
+SConscript("terrain/SCsub", exports="env_TWIM")
+SConscript("entities/SCsub", exports="env_TWIM")
+SConscript("items/SCsub", exports="env_TWIM")
+SConscript("simulation/SCsub", exports="env_TWIM")
+SConscript("physics/SCsub", exports="env_TWIM")
+SConscript("rendering/SCsub", exports="env_TWIM")
+SConscript("persistence/SCsub", exports="env_TWIM")
+
+if env.editor_build:
+    SConscript("editor/SCsub", exports="env_TWIM")

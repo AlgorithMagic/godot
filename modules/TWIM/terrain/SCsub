@@ -1,0 +1,9 @@
+from misc.utility.scons_hints import *
+
+Import("env_TWIM")
+
+env_TWIM.add_source_files(env_TWIM.modules_sources, [
+    "chunk_store.cpp",
+    "tile_type_resource.cpp",
+    "tile_set_resource.cpp",
+])

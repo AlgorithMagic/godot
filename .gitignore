@@ -31,7 +31,6 @@
 # Buildsystem
 bin
 *.gen.*
-compile_commands.json
 platform/windows/godot_res.res
 
 # Ninja build files
@@ -396,3 +395,4 @@ $RECYCLE.BIN/
 *.msp
 *.lnk
 *.generated.props
+!/compile_commands.json
